@@ -24,14 +24,17 @@ local find_folder_with_file = function(filename, start_dir)
   return nil
 end
 
-local getPath=function(str,sep)
-    sep=sep or'/'
-    return str:match("(.*"..sep..")")
+local getPath = function(str, sep)
+  sep = sep or '/'
+  return str:match("(.*" .. sep .. ")")
 end
 
-local file_exists =function(name)
-   local f=io.open(name,"r")
-   if f~=nil then io.close(f) return true else return false end
+local file_exists = function(name)
+  local f = io.open(name, "r")
+  if f ~= nil then
+    io.close(f)
+    return true
+  else return false end
 end
 
 local sources = {
@@ -39,28 +42,30 @@ local sources = {
   -- webdev stuff
   -- b.formatting.deno_fmt, -- choosed deno for ts/js files cuz its very fast!
   b.formatting.eslint_d.with({
-        timeout = 60000,
-        cwd = function(params)
-          -- return "/home/uri/ws/fundguard/fgrepo/client/packages/libs/domain"
-          -- return vim.fn.getcwd()
-          local fn = find_folder_with_file("tsconfig.json", getPath(vim.api.nvim_buf_get_name(0)))
-          return fn or vim.fn.getcwd()
-        end,
-    }),
+    timeout = 60000,
+    cwd = function(params)
+      -- return "/home/uri/ws/fundguard/fgrepo/client/packages/libs/domain"
+      -- return vim.fn.getcwd()
+      -- print(getPath(vim.api.nvim_buf_get_name(0)))
+      local fn = find_folder_with_file("tsconfig.json", getPath(vim.api.nvim_buf_get_name(0)))
+      -- print(fn)
+      return fn or vim.fn.getcwd()
+    end,
+  }),
   b.diagnostics.eslint_d.with({
-        timeout = 60000,
-        cwd = function(params)
-          local fn = find_folder_with_file("tsconfig.json", getPath(vim.api.nvim_buf_get_name(0)))
-          return fn or vim.fn.getcwd()
-          -- local fn = getPath(vim.api.nvim_buf_get_name(0))
-          -- while not file_exists(fn . "tsconfig.json") do
-          --   fn = getPath(fn)
-          -- end
-          -- return fn
-          -- return getPath(vim.api.nvim_buf_get_name(0))
-            -- return vim.fn.getcwd()
-        end,
-    }),
+    timeout = 60000,
+    cwd = function(params)
+      local fn = find_folder_with_file("tsconfig.json", getPath(vim.api.nvim_buf_get_name(0)))
+      return fn or vim.fn.getcwd()
+      -- local fn = getPath(vim.api.nvim_buf_get_name(0))
+      -- while not file_exists(fn . "tsconfig.json") do
+      --   fn = getPath(fn)
+      -- end
+      -- return fn
+      -- return getPath(vim.api.nvim_buf_get_name(0))
+      -- return vim.fn.getcwd()
+    end,
+  }),
   -- b.formatting.prettier.with { filetypes = { "html", "markdown", "css" } }, -- so prettier works only on these filetypes
 
   -- Lua
@@ -74,7 +79,16 @@ null_ls.setup {
   debug = true,
   sources = sources,
   autostart = true,
+  on_attach = function(client, bufnr)
+    if client.supports_method("textDocument/formatting") then
+      vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+      vim.api.nvim_create_autocmd("BufWritePre", {
+        group = augroup,
+        buffer = bufnr,
+        callback = function()
+          vim.lsp.buf.format()
+        end,
+      })
+    end
+  end,
 }
-
-
-
