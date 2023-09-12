@@ -23,6 +23,15 @@ M.ui = {
 			}
 		end,
 	},
+	tabufline = {
+		overriden_modules = function(modules)
+			modules[4] = (function()
+				return ""
+			end)()
+
+			-- or table.remove(modules, 4)
+		end,
+	},
 }
 
 M.plugins = "custom.plugins"
