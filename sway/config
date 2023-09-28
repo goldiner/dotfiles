@@ -27,12 +27,14 @@ set $menu wofi --show drun -i
 #
 # Default wallpaper (more resolutions are available in /usr/share/backgrounds/sway/)
 
-output DP-1 pos 0 0 res 1920x1080
-output HDMI-A-1 pos 1920 0 res 1920x1080
+output HDMI-A-2 pos 0 0 res 2560x1440
+output HDMI-A-1 pos 2560 0 res 2560x1440
+output HDMI-A-4 disable
+
 
 # focus output HDMI-A-2
 
-output * bg /home/urig/Pictures/background/jw.jpg fill
+output * bg /home/uri/.config/sway/jw.jpg fill
 
 
 gaps inner 2
@@ -121,7 +123,7 @@ gaps bottom -2
 
     default_border none
     default_floating_border none
-    font pango:monospace 0
+    font pango:monospace 9
     # titlebar_padding 1
     # titlebar_border_thickness 0
 
@@ -151,6 +153,9 @@ gaps bottom -2
     bindsym $mod+Shift+Down move down
     bindsym $mod+Shift+Up move up
     bindsym $mod+Shift+Right move right
+
+    bindsym $mod+Control+Shift+$right move workspace to output right
+    bindsym $mod+Control+Shift+$left move workspace to output left
 #
 # Workspaces:
 #
@@ -166,8 +171,8 @@ set $ws9 "9"
 set $ws10 "10"
 
 
-set $disp1 "HDMI-A-1"
-set $disp2 "eDP-1"
+set $disp1 "HDMI-A-2"
+set $disp2 "HDMI-A-1"
 
 # use workspaces on different monitors
     workspace 1 output $disp1

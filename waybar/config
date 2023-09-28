@@ -5,13 +5,19 @@
     // "width": 1280, // Waybar width
     "spacing": 4, // Gaps between modules (4px)
     // Choose the order of the modules
-    "modules-left": ["sway/workspaces", "sway/mode", "sway/scratchpad", "custom/media"],
-    "modules-center": ["sway/window"],
-    "modules-right": ["pulseaudio", "cpu", "memory", "backlight", "keyboard-state", "sway/language", "clock", "tray", "battery", "battery#bat2"],
+    "modules-left": ["hyprland/workspaces", "sway/workspaces", "sway/mode", "sway/scratchpad", "custom/media"],
+    "modules-center": ["hyprland/window","sway/window"],
+    "modules-right": ["network","pulseaudio", "cpu", "memory", "backlight", "keyboard-state", "sway/language", "clock", "tray", "battery", "battery#bat2"],
+    // "hyprland/language",
+
 //    "modules-right": ["mpd", "pulseaudio", "cpu", "memory", "backlight", "keyboard-state", "sway/language", "clock", "tray"],
 // "idle_inhibitor", 
 // "battery", "battery#bat2", "temperature", "network", 
-
+"hyprland/workspaces": {
+     "format": "{name}",
+     "on-scroll-up": "hyprctl dispatch workspace e+1",
+     "on-scroll-down": "hyprctl dispatch workspace e-1"
+},
     // Modules configuration
     // "sway/workspaces": {
     //     "disable-scroll": true,
@@ -129,11 +135,13 @@
     "network": {
         // "interface": "wlp2*", // (Optional) To force the use of this interface
         "format-wifi": "{essid} ({signalStrength}%) ",
-        "format-ethernet": "{ipaddr}/{cidr} ",
-        "tooltip-format": "{ifname} via {gwaddr} ",
+//        "format-ethernet": "{ipaddr}/{cidr} ",
+        "format-ethernet": "{bandwidthDownBits}   {bandwidthUpBits} ",
+        "tooltip-format": "{ifname} via {gwaddr}",
         "format-linked": "{ifname} (No IP) ",
         "format-disconnected": "Disconnected ⚠",
-        "format-alt": "{ifname}: {ipaddr}/{cidr}"
+        "format-alt": "{ifname}: {ipaddr}/{cidr}",
+        "interval": 5
     },
     "pulseaudio": {
         // "scroll-step": 1, // %, can be a float
