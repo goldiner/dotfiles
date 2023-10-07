@@ -18,8 +18,8 @@ columns = 0
 lines   = 0
 
 [window.padding]
-x = 12
-y = 12
+x = 0
+y = 0
 
 [scrolling]
 history = 12000
@@ -28,24 +28,25 @@ history = 12000
 builtin_box_drawing = false
 size                = 20
 
-# [font.bold]
-# family = "FantasqueSansMNerdFont Mono"
-# style  = "Bold"
-#
-# [font.bold_italic]
-# family = "FantasqueSansMNerdFont Mono"
-# style  = "Bold Italic"
+[font.bold]
+family = "JetBrainsMonoNerdFont"
+style  = "Bold"
+
+[font.bold_italic]
+family = "JetBrainsMonoNerdFont"
+style  = "Bold Italic"
 #
 [font.glyph_offset]
 x = 0
 y = 0
 
-# [font.italic]
-# family = "FantasqueSansMNerdFont Mono"
-# style  = "Italic"
+[font.italic]
+family = "JetBrainsMonoNerdFont"
+style  = "Italic"
 
 [font.normal]
-family = "DejaVuSansMNerdFont"
+family = "JetBrainsMonoNerdFont"
+# style  = "Bold Italic"
 
 [font.offset]
 x = 0
