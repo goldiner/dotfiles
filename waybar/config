@@ -7,7 +7,7 @@
     // Choose the order of the modules
     "modules-left": ["hyprland/workspaces", "sway/workspaces", "sway/mode", "sway/scratchpad", "custom/media"],
     "modules-center": ["hyprland/window","sway/window"],
-    "modules-right": ["network","pulseaudio", "cpu", "memory", "backlight", "sway/language", "clock", "tray", "battery", "battery#bat2"],
+    "modules-right": ["network","pulseaudio", "cpu", "memory", "temperature", "backlight", "sway/language", "clock", "tray", "battery", "battery#bat2"],
     // "hyprland/language",
 
 //    "modules-right": ["mpd", "pulseaudio", "cpu", "memory", "backlight", "keyboard-state", "sway/language", "clock", "tray"],
@@ -90,11 +90,11 @@
         // "icon-size": 21,
         "spacing": 10
     },
-//    "clock": {
+    "clock": {
         // "timezone": "America/New_York",
-//        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-//        "format-alt": "{:%Y-%m-%d}"
-//    },
+        "tooltip-format": "<small>{:%d }</small><tt><small>{calendar}</small></tt>",
+        "format-alt": "{:%Y-%m-%d}"
+    },
     "cpu": {
         "format": "{usage}% ",
         "tooltip": false
@@ -103,12 +103,12 @@
         "format": "{}% "
     },
     "temperature": {
-        // "thermal-zone": 2,
-        // "hwmon-path": "/sys/class/hwmon/hwmon2/temp1_input",
-        "critical-threshold": 80,
+        "thermal-zone": 2,
+        "hwmon-path": "/sys/class/hwmon/hwmon3/temp1_input",
+        "critical-threshold": 60,
         // "format-critical": "{temperatureC}°C {icon}",
         "format": "{temperatureC}°C {icon}",
-        "format-icons": ["", "", ""]
+        "format-icons": ["", "", ""]
     },
     "backlight": {
         // "device": "acpi_video1",

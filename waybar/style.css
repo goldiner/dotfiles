@@ -143,9 +143,9 @@ window#waybar {
     background: #ffa000;
 }
 
-#temperature {
-    background: #f0932b;
-}
+/* #temperature { */
+/*     background: #f0932b; */
+/* } */
 
 #temperature.critical {
     background: #eb4d4b;
