@@ -27,7 +27,6 @@ local plugins = {
 		"williamboman/mason.nvim",
 		opts = overrides.mason,
 	},
-
 	{
 		"nvim-treesitter/nvim-treesitter",
 		opts = overrides.treesitter,
@@ -78,6 +77,37 @@ local plugins = {
 		--   }
 		-- end,
 	},
+	{
+		"tpope/vim-rhubarb",
+		lazy = false,
+		-- cmd = "Git"
+		-- config = function()
+		--   require("vim-fugitive").setup(){
+		--     keys = {}
+		--   }
+		-- end,
+	},
+	{
+		"cedarbaum/fugitive-azure-devops.vim",
+		lazy = false,
+		-- cmd = "Git"
+		-- config = function()
+		--   require("vim-fugitive").setup(){
+		--     keys = {}
+		--   }
+		-- end,
+	},
+	{
+		"mfussenegger/nvim-jdtls",
+		lazy = false,
+		-- cmd = "Git"
+		-- config = function()
+		--   require("vim-fugitive").setup(){
+		--     keys = {}
+		--   }
+		-- end,
+	},
+
 	{
 		"vimwiki/vimwiki",
 		lazy = false,

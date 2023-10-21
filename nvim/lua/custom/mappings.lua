@@ -22,13 +22,23 @@ M.general = {
 		["<leader>ww"] = { ":VimwikiMakeDiaryNote<cr>", "Vimwiki diary note", opts = { silent = true, noremap = true } },
 		["<leader>wi"] = { ":VimwikiIndex<cr>", "Vimwiki diary note", opts = { silent = true, noremap = true } },
 
-		["<leader>gd"] = { ":Gvdiffsplit develop<cr>", "show quickfix", opts = { silent = true, noremap = true } },
+		["<leader>gd"] = {
+			":Gvdiffsplit develop<cr>",
+			"diff with develop (local)",
+			opts = { silent = true, noremap = true },
+		},
 		["<leader>gh"] = { ":Gllog! -- %<cr>", "git log for current buffer", opts = { silent = true, noremap = true } },
+		["<leader>go"] = { ":GBrowse<cr>", "GBrowse", opts = { silent = true, noremap = true } },
 		-- vim.diagnostic.show()
 		["<C-S-k>"] = { ":m .-2<cr>==", "move line up", opts = { nowait = true } },
 		["<C-S-j>"] = { ":m .+1<cr>==", "move line down", opts = { nowait = true } },
 		["<leader>,"] = { ":colder <cr>==", "older quickfix", opts = { nowait = true } },
-		["<leader>."] = { ":cnewer <cr>==", "newer quickfix", opts = { nowait = true } },
+		["<leader>."] = { ":cnewer <cr>==", "older quickfix", opts = { nowait = true } },
+		["<leader>ff"] = {
+			":lua vim.diagnostic.open_float()<CR>",
+			"show_line_diagnostics",
+			opts = { silent = true, noremap = true },
+		},
 	},
 	v = {
 		["<C-S-k>"] = { ":m '<-2<CR>gv=gv", "move line up", opts = { nowait = true } },

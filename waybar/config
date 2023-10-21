@@ -8,6 +8,7 @@
     "modules-left": ["hyprland/workspaces", "sway/workspaces", "sway/mode", "sway/scratchpad", "custom/media"],
     "modules-center": ["hyprland/window","sway/window"],
     "modules-right": ["network","pulseaudio", "cpu", "memory", "temperature", "backlight", "sway/language", "clock", "tray", "battery", "battery#bat2"],
+    //"modules-right": ["pulseaudio", "cpu", "memory", "backlight", "sway/language", "clock", "tray", "battery", "battery#bat2"],
     // "hyprland/language",
 
 //    "modules-right": ["mpd", "pulseaudio", "cpu", "memory", "backlight", "keyboard-state", "sway/language", "clock", "tray"],

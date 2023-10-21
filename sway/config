@@ -302,7 +302,9 @@ input type:keyboard {
     xkb_options grp:alt_space_toggle,caps:escape
 }
 
-for_window [app_id=".*"] split toggle
+for_window [ title="Picture-in-Picture"] floating enable, resize set width 536 px height 300 px, move position 1970 px 1110 px, sticky on
+# for_window [app_id=".*"] split toggle
+# app_id="librewolf"
 
 # exec mako
 
