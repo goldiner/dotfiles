@@ -69,6 +69,16 @@ local plugins = {
 		-- end,
 	},
 	{
+		"tpope/vim-surround",
+		lazy = false,
+		-- cmd = "Git"
+		-- config = function()
+		--   require("vim-fugitive").setup(){
+		--     keys = {}
+		--   }
+		-- end,
+	},
+	{
 		"vimwiki/vimwiki",
 		lazy = false,
 		-- config = function()
@@ -167,7 +177,7 @@ local plugins = {
 }
 vim.g.vimwiki_list = {
 	{
-		path = "/home/uri/vimwiki",
+		path = "~/vimwiki",
 		syntax = "markdown",
 		ext = ".md",
 	},
