@@ -124,3 +124,4 @@ vim.cmd("set rnu")
 vim.cmd("au BufNewFile ~/vimwiki/diary/*.md :silent 0r !~/ws/scripts/diary-template.rs '%'")
 
 vim.cmd("set spell")
+

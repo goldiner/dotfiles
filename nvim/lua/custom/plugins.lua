@@ -141,6 +141,15 @@ local plugins = {
 			})
 		end,
 	},
+	{
+		"lambdalisue/suda.vim",
+		lazy = false,
+	},
+
+	{
+		"windwp/nvim-autopairs",
+		enabled = false,
+	},
 	-- 'kevinhwang91/nvim-bqf'
 	-- {
 	--   "folke/trouble.nvim",
