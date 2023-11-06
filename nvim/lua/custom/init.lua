@@ -125,3 +125,4 @@ vim.cmd("au BufNewFile ~/vimwiki/diary/*.md :silent 0r !~/ws/scripts/diary-templ
 
 vim.cmd("set spell")
 
+vim.cmd("set wildignore+=**/node_modules/**,.git/**,**/dist/**,**/target/**")
