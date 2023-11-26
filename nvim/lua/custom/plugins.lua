@@ -150,6 +150,53 @@ local plugins = {
 		"windwp/nvim-autopairs",
 		enabled = false,
 	},
+	{
+		"mfussenegger/nvim-dap",
+		lazy = false,
+		config = function()
+			local dap = require("dap")
+			dap.configurations.typescript = {
+				{
+					type = "node",
+					name = "node attach",
+					request = "attach",
+					-- program = "${file}",
+					cwd = vim.fn.getcwd(),
+					sourceMaps = true,
+					protocol = "inspector",
+				},
+			}
+			dap.adapters.node = {
+				-- type = "server",
+				-- command = "js-debug-adapter",
+				-- port = "9229",
+				type = "executable",
+				command = "node-debug2-adapter",
+				args = {},
+			}
+		end,
+	},
+	{
+		"rcarriga/nvim-dap-ui",
+		config = function()
+			local dap, dapui = require("dap"), require("dapui")
+			dapui.setup()
+
+			dap.listeners.after.event_initialized["dapui_config"] = function()
+				dapui.open()
+			end
+			dap.listeners.before.event_terminated["dapui_config"] = function()
+				dapui.close()
+			end
+			dap.listeners.before.event_exited["dapui_config"] = function()
+				dapui.close()
+			end
+		end,
+
+		lazy = false,
+	},
+
+	--
 	-- 'kevinhwang91/nvim-bqf'
 	-- {
 	--   "folke/trouble.nvim",

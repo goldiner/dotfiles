@@ -39,6 +39,21 @@ M.general = {
 			"show_line_diagnostics",
 			opts = { silent = true, noremap = true },
 		},
+		["<leader>fj"] = {
+			":%!jq '.'<CR>",
+			"Forman JSON",
+			opts = { silent = true, noremap = true },
+		},
+		["<leader>db"] = {
+			":lua require'dap'.toggle_breakpoint()<CR>",
+			"Set break point",
+			opts = { silent = true, noremap = true },
+		},
+		["<leader>dc"] = {
+			":lua require'dap'.continue()<CR>",
+			"Set break point",
+			opts = { silent = true, noremap = true },
+		},
 	},
 	v = {
 		["<C-S-k>"] = { ":m '<-2<CR>gv=gv", "move line up", opts = { nowait = true } },
