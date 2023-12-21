@@ -79,6 +79,7 @@ local plugins = {
 		--   }
 		-- end,
 	},
+
 	{
 		"tpope/vim-rhubarb",
 		lazy = false,
@@ -89,6 +90,7 @@ local plugins = {
 		--   }
 		-- end,
 	},
+
 	{
 		"cedarbaum/fugitive-azure-devops.vim",
 		lazy = false,
@@ -99,6 +101,7 @@ local plugins = {
 		--   }
 		-- end,
 	},
+
 	{
 		"mfussenegger/nvim-jdtls",
 		lazy = false,
@@ -126,6 +129,7 @@ local plugins = {
 		-- end,
 		-- -- cmd = "Wiki"
 	},
+
 	{
 		"phaazon/hop.nvim",
 		lazy = false,
@@ -133,6 +137,7 @@ local plugins = {
 			require("hop").setup()
 		end,
 	},
+
 	{
 		"rmagatti/auto-session",
 		lazy = false,
@@ -143,6 +148,7 @@ local plugins = {
 			})
 		end,
 	},
+
 	{
 		"lambdalisue/suda.vim",
 		lazy = false,
@@ -225,8 +231,6 @@ local plugins = {
 		end,
 		-- ft = { "0" },
 	},
-
-	--
 	-- 'kevinhwang91/nvim-bqf'
 	-- {
 	--   "folke/trouble.nvim",

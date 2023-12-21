@@ -51,7 +51,7 @@ M.general = {
 		},
 		["<leader>dc"] = {
 			":lua require'dap'.continue()<CR>",
-			"Set break point",
+			"Debug - continue",
 			opts = { silent = true, noremap = true },
 		},
 	},
