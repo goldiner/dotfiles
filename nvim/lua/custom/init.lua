@@ -126,3 +126,22 @@ vim.cmd("au BufNewFile ~/vimwiki/diary/*.md :silent 0r !~/ws/scripts/diary-templ
 vim.cmd("set spell")
 
 vim.cmd("set wildignore+=**/node_modules/**,.git/**,**/dist/**,**/target/**")
+
+vim.cmd("command! -nargs=1 Browse silent execute '!open' shellescape(<q-args>,1)")
+
+-- let s:baleia = luaeval("require('baleia').setup { }")
+-- command! BaleiaColorize call s:baleia.once(bufnr('%'));
+-- " Autofix entire buffer with eslint_d:
+-- nnoremap <leader>f mF:%!eslint_d --stdin --fix-to-stdout<CR>`F
+-- " Autofix visual selection with eslint_d:
+-- vnoremap <leader>f :!eslint_d --stdin --fix-to-stdout<CR>gv
+--
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = "sh",
+	callback = function()
+		vim.lsp.start({
+			name = "bash-language-server",
+			cmd = { "bash-language-server", "start" },
+		})
+	end,
+})

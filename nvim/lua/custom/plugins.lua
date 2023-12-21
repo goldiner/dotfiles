@@ -4,7 +4,9 @@ local overrides = require("custom.configs.overrides")
 local plugins = {
 
 	-- Override plugin definition options
-
+	--
+	-- preparation for v3 nvchad
+	-- { "lukas-reineke/indent-blankline.nvim", main = "ibl", opts = {} },
 	{
 		"neovim/nvim-lspconfig",
 		dependencies = {
@@ -194,6 +196,34 @@ local plugins = {
 		end,
 
 		lazy = false,
+	},
+
+	{
+		"rust-lang/rust.vim",
+		ft = "rust",
+		init = function()
+			vim.g.rustfmt_autosave = 1
+		end,
+	},
+
+	{
+		"saecki/crates.nvim",
+		ft = { "rust", "toml" },
+		config = function(_, opts)
+			local crates = require("crates")
+			crates.setup(opts)
+			crates.show()
+		end,
+	},
+	{
+		"m00qek/baleia.nvim",
+		command = "bal",
+		lazy = false,
+		config = function()
+			vim.cmd("let baleia = luaeval(\"require('baleia').setup { }\")")
+			vim.cmd("command! BaleiaColorize call baleia.once(bufnr('%'))")
+		end,
+		-- ft = { "0" },
 	},
 
 	--

@@ -30,6 +30,20 @@ lspconfig.tsserver.setup({
 	end,
 })
 
+lspconfig.tsserver.setup({
+	on_attach = function(client)
+		client.server_capabilities.documentFormattingProvider = false
+		on_attach(client)
+	end,
+	capabilities = capabilities,
+	--   {
+	--   document_formatting = false
+	-- },
+	root_dir = function()
+		return vim.loop.cwd()
+	end,
+})
+
 -- lspconfig.java_language_server.setup({
 -- 	on_attach = on_attach,
 -- 	capabilities = capabilities,
