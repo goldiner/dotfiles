@@ -59,6 +59,13 @@ M.general = {
 		["<C-S-k>"] = { ":m '<-2<CR>gv=gv", "move line up", opts = { nowait = true } },
 		["<C-S-j>"] = { ":m '>+1<CR>gv=gv", opts = { nowait = true } },
 	},
+	i = {
+		["<C-J>"] = {
+			'copilot#Accept("<CR>")',
+			"Copilot accept",
+			opts = { silent = true, expr = true },
+		},
+	},
 }
 -- '<cmd>lua vim.diagnostic.open_float()<CR>', { noremap = true, silent = true })
 -- map("n", "<A-j>", ":m .+1<CR>==") -- move line up(n)

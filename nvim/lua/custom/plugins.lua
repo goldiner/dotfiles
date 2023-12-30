@@ -231,6 +231,12 @@ local plugins = {
 		end,
 		-- ft = { "0" },
 	},
+	{
+		"github/copilot.vim",
+		lazy = false,
+		-- ft = { "0" },
+	},
+
 	-- 'kevinhwang91/nvim-bqf'
 	-- {
 	--   "folke/trouble.nvim",
