@@ -61,9 +61,9 @@ M.general = {
 	},
 	i = {
 		["<C-J>"] = {
-			'copilot#Accept("<CR>")',
+			'copilot#Accept("")',
 			"Copilot accept",
-			opts = { silent = true, expr = true },
+			opts = { silent = true, expr = true, replace_keycodes = false },
 		},
 	},
 }
