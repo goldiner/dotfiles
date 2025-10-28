@@ -5,33 +5,34 @@ local M = {}
 local highlights = require("custom.highlights")
 
 M.ui = {
-	theme = "chadracula",
-	theme_toggle = { "chadracula", "one_light" },
+  theme = "chadracula",
+  -- theme = "base46",
+  theme_toggle = { "chadracula", "one_light" },
 
-	hl_override = highlights.override,
-	hl_add = highlights.add,
-	transparency = true,
-	statusline = {
-		overriden_modules = function()
-			-- local st_modules = require "nvchad_ui.statusline.default"
-			-- this is just default table of statusline modules
+  hl_override = highlights.override,
+  hl_add = highlights.add,
+  transparency = true,
+  statusline = {
+    overriden_modules = function()
+      -- local st_modules = require "nvchad_ui.statusline.default"
+      -- this is just default table of statusline modules
 
-			return {
-				git = function()
-					return "%{FugitiveStatusline()}"
-				end,
-			}
-		end,
-	},
-	tabufline = {
-		overriden_modules = function(modules)
-			modules[4] = (function()
-				return ""
-			end)()
+      return {
+        git = function()
+          return "%{FugitiveStatusline()}"
+        end,
+      }
+    end,
+  },
+  tabufline = {
+    overriden_modules = function(modules)
+      modules[4] = (function()
+        return ""
+      end)()
 
-			-- or table.remove(modules, 4)
-		end,
-	},
+      -- or table.remove(modules, 4)
+    end,
+  },
 }
 
 M.plugins = "custom.plugins"
