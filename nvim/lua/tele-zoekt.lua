@@ -111,8 +111,27 @@ local function run_zoekt_search(prompt)
 
 	local content_query = prompt:match("content:([%w%s%p]*)")
 	if content_query then
-		local stripped = content_query:gsub("[^a-zA-Z]", "")
-		if #stripped < 3 then
+		-- Trim whitespace
+		local trimmed = vim.trim(content_query)
+		
+		-- Prevent too generic searches
+		if #trimmed < 3 then
+			return {}
+		end
+		
+		-- Block searches that are only punctuation/symbols (like "...", "***", "===")
+		if trimmed:match("^[%p%s]*$") then
+			return {}
+		end
+		
+		-- Block searches that are only repeated characters (like "aaa", "111")
+		if trimmed:match("^(.)\1+$") and #trimmed <= 4 then
+			return {}
+		end
+		
+		-- Ensure at least 3 non-regex characters (prevent generic regex like ".*", ".+", ".*?")
+		local non_regex_chars = trimmed:gsub("[%.%*%+%?%^%$%(%)%[%]%{%}%|%\\]", "")
+		if #non_regex_chars < 3 then
 			return {}
 		end
 	end
@@ -125,12 +144,45 @@ local function run_zoekt_search(prompt)
 	-- file:.*\.ts content:TAX_LOT
 	local encoded = url_encode(prompt)
 	--num - is the number of files (the number of matches can be higher)
+	
+	-- Get the dynamic port from zoekt-enhanced module
+	local port = require("zoekt-enhanced").get_port()
 	local url = string.format(
-		"http://localhost:6070/search?q=%s&num=50&ctx=0&format=json",
-		encoded)
-	local res = curl.get(url, { timeout = 2000 })
-	-- local parsed = vim.fn.json_decode(res.body)
-	local parsed = vim.json.decode(res.body)
+		"http://localhost:%d/search?q=%s&num=50&ctx=0&format=json",
+		port, encoded)
+	-- Safe curl request with error handling
+	local res
+	local ok, curl_result = pcall(curl.get, url, { timeout = 10000 })
+	if not ok then
+		-- Connection failed at curl level
+		local zoekt_enhanced = require("zoekt-enhanced")
+		if zoekt_enhanced.reset_server_status then
+			zoekt_enhanced.reset_server_status()
+		end
+		print("Search failed: Cannot connect to server (try again)")
+		return {}
+	end
+	res = curl_result
+	
+	-- Better error handling for failed requests
+	if not res or not res.body or res.body == "" then
+		-- Server failed, reset the server status in zoekt-enhanced
+		local zoekt_enhanced = require("zoekt-enhanced")
+		if zoekt_enhanced.reset_server_status then
+			zoekt_enhanced.reset_server_status()
+		end
+		print("Search failed: No response from server (try again)")
+		return {}
+	end
+	
+	-- Safe JSON decode with error handling
+	local parsed
+	local ok, decode_result = pcall(vim.json.decode, res.body)
+	if not ok then
+		print("Search failed: Invalid JSON response")
+		return {}
+	end
+	parsed = decode_result
 	local MAX_RESULTS = 100
 	local count = 0
 

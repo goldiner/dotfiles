@@ -19,6 +19,11 @@ vim.keymap.set('i', '<S-Down>', '<NOP>', { noremap = true, silent = true })
 vim.cmd('command! W w')
 
 vim.g.mapleader = " "
+
+-- For Visual Mode (v) - useful for fixing selected text
+-- vim.keymap.set("v", "<leader>i", ":PrtRewrite FixAndExplain<CR>", { desc = "AI Fix Grammar" })
+vim.keymap.set("v", "<leader>i", ":PrtRewrite Fix with explanation<CR>", { desc = "AI Fix Grammar" })
+
 -- vim.o.focus = true
 -------------------------------------------------------------------------------
 --
@@ -166,79 +171,85 @@ vim.keymap.set('n', '<leader>c', '<cmd>w !wl-copy<cr><cr>')
 
 -- Playwright test command copier
 vim.keymap.set('n', '<leader>ww', function()
-    local current_file = vim.fn.expand('%:p')
-    local current_line = vim.fn.line('.')
-    
-    -- Check if we're in a Playwright test file
-    if not string.match(current_file, '%.spec%.ts$') and not string.match(current_file, '%.test%.ts$') then
-        vim.notify('Not in a Playwright test file', vim.log.levels.WARNING)
-        return
-    end
-    
-    -- Get the test name from the current line or nearby lines
-    local test_name = nil
-    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-    
-    -- Look for test() or it() calls around the current line
-    for i = math.max(1, current_line - 10), math.min(#lines, current_line + 10) do
-        local line = lines[i]
-        if string.match(line, 'test%s*%(') or string.match(line, 'it%s*%(') then
-            -- Extract test name from the line
-            local test_match = string.match(line, 'test%s*%([^,]*["\']([^"\']*)["\']')
-            if not test_match then
-                test_match = string.match(line, 'it%s*%([^,]*["\']([^"\']*)["\']')
-            end
-            if test_match then
-                test_name = test_match
-                break
-            end
-        end
-    end
-    
-    if not test_name then
-        vim.notify('Could not find test name around current line', vim.log.levels.WARNING)
-        return
-    end
-    
-    -- Get relative path from the fundguard repo root
-    local repo_root = '$FG_DIR'
-    local relative_path = string.gsub(current_file, repo_root .. '/', '')
-    
-    -- Build the command to run in the playwright directory with trace enabled
-    local playwright_dir = repo_root .. '/automation/packages/playwright'
-    local cmd = string.format('cd %s && TZ=America/Los_Angeles npx playwright test %s --grep "%s" --project=e2e --workers=1 --headed --debug', playwright_dir, relative_path, test_name)
-    
-    -- Copy the command to clipboard using wl-copy
-    vim.fn.jobstart('echo ' .. vim.fn.shellescape(cmd) .. ' | wl-copy', { detach = true })
-    
-    vim.notify('Copied Playwright command to clipboard: ' .. test_name, vim.log.levels.INFO)
+	local current_file = vim.fn.expand('%:p')
+	local current_line = vim.fn.line('.')
+
+	-- Check if we're in a Playwright test file
+	if not string.match(current_file, '%.spec%.ts$') and not string.match(current_file, '%.test%.ts$') then
+		vim.notify('Not in a Playwright test file', vim.log.levels.WARNING)
+		return
+	end
+
+	-- Get the test name from the current line or nearby lines
+	local test_name = nil
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+
+	-- Look for test() or it() calls around the current line
+	for i = math.max(1, current_line - 10), math.min(#lines, current_line + 10) do
+		local line = lines[i]
+		if string.match(line, 'test%s*%(') or string.match(line, 'it%s*%(') then
+			-- Extract test name from the line
+			local test_match = string.match(line, 'test%s*%([^,]*["\']([^"\']*)["\']')
+			if not test_match then
+				test_match = string.match(line, 'it%s*%([^,]*["\']([^"\']*)["\']')
+			end
+			if test_match then
+				test_name = test_match
+				break
+			end
+		end
+	end
+
+	if not test_name then
+		vim.notify('Could not find test name around current line', vim.log.levels.WARNING)
+		return
+	end
+
+	-- Get relative path from the fundguard repo root
+	local repo_root = '$FG_DIR'
+	local relative_path = string.gsub(current_file, repo_root .. '/', '')
+
+	-- Build the command to run in the playwright directory with trace enabled
+	local playwright_dir = repo_root .. '/automation/packages/playwright'
+	local cmd = string.format(
+		'cd %s && TZ=America/Los_Angeles npx playwright test %s --grep "%s" --project=e2e --workers=1 --headed --debug',
+		playwright_dir, relative_path, test_name)
+
+	-- Copy the command to clipboard using wl-copy
+	vim.fn.jobstart('echo ' .. vim.fn.shellescape(cmd) .. ' | wl-copy', { detach = true })
+
+	vim.notify('Copied Playwright command to clipboard: ' .. test_name, vim.log.levels.INFO)
 end, { desc = 'Copy current Playwright test command to clipboard' })
 
 -- Command to manually open the most recent trace file
 vim.keymap.set('n', '<leader>wo', function()
-    local repo_root = '/home/uri/ws/fundguard/fgrepo'
-    local playwright_dir = repo_root .. '/automation/packages/playwright'
-    
-    -- Find the most recent trace file
-    local trace_cmd = string.format('cd %s && find test-results -name "*.zip" -type f -printf "%%T@ %%p\\n" | sort -n | tail -1 | cut -d" " -f2-', playwright_dir)
-    
-    vim.fn.jobstart(trace_cmd, {
-        on_exit = function(_, trace_exit_code, trace_output)
-            if trace_exit_code == 0 and trace_output and #trace_output > 0 then
-                local trace_file = trace_output[1]
-                if trace_file and trace_file ~= "" then
-                    local full_trace_path = playwright_dir .. '/' .. trace_file
-                    local show_trace_cmd = string.format('cd %s && PLAYWRIGHT_TRACE_VIEWER_HOST=127.0.0.1 npx playwright show-trace "%s"', playwright_dir, full_trace_path)
-                    vim.fn.jobstart(show_trace_cmd, { detach = true })
-                    vim.notify('Opening trace viewer: ' .. trace_file, vim.log.levels.INFO)
-                else
-                    vim.notify('No trace file found', vim.log.levels.WARNING)
-                end
-            else
-                vim.notify('No trace file found', vim.log.levels.WARNING)
-            end
-        end
-    })
+	local repo_root = '/home/uri/ws/fundguard/fgrepo'
+	local playwright_dir = repo_root .. '/automation/packages/playwright'
+
+	-- Find the most recent trace file
+	local trace_cmd = string.format(
+		'cd %s && find test-results -name "*.zip" -type f -printf "%%T@ %%p\\n" | sort -n | tail -1 | cut -d" " -f2-',
+		playwright_dir)
+
+	vim.fn.jobstart(trace_cmd, {
+		on_exit = function(_, trace_exit_code, trace_output)
+			if trace_exit_code == 0 and trace_output and #trace_output > 0 then
+				local trace_file = trace_output[1]
+				if trace_file and trace_file ~= "" then
+					local full_trace_path = playwright_dir .. '/' .. trace_file
+					local show_trace_cmd = string.format(
+						'cd %s && PLAYWRIGHT_TRACE_VIEWER_HOST=127.0.0.1 npx playwright show-trace "%s"',
+						playwright_dir, full_trace_path)
+					vim.fn.jobstart(show_trace_cmd, { detach = true })
+					vim.notify('Opening trace viewer: ' .. trace_file, vim.log.levels.INFO)
+				else
+					vim.notify('No trace file found', vim.log.levels.WARNING)
+				end
+			else
+				vim.notify('No trace file found', vim.log.levels.WARNING)
+			end
+		end
+	})
 end, { desc = 'Open most recent Playwright trace file' })
 -- <leader><leader> toggles between buffers
 vim.keymap.set('n', '<leader><leader>', '<c-^>')
@@ -646,7 +657,49 @@ require("lazy").setup({
 	-- LSP
 	{
 		'neovim/nvim-lspconfig',
+		dependencies = {
+			'williamboman/mason.nvim',
+			'williamboman/mason-lspconfig.nvim',
+		},
 		config = function()
+			-- Setup Mason first
+			require("mason").setup()
+
+			-- Ensure packages are installed
+			local mason_registry = require("mason-registry")
+
+			-- 1. Refresh the registry to ensure we have the latest package list
+			mason_registry.refresh(function()
+				-- 2. Define your packages (Note: changed lombok-nightly to lombok)
+			        -- removing for ctags
+				local packages = {} -- "jdtls", "lombok-nightly" }
+
+				for _, package_name in ipairs(packages) do
+					-- 3. Use has_package to avoid crashing if a name is wrong
+					if mason_registry.has_package(package_name) then
+						local package = mason_registry.get_package(package_name)
+						if not package:is_installed() then
+							package:install()
+						end
+					else
+						print("Mason: Package " .. package_name .. " not found in registry")
+					end
+				end
+			end)
+
+			-- local packages = { "jdtls", "lombok-nightly" }
+			-- for _, package_name in ipairs(packages) do
+			-- 	local package = mason_registry.get_package(package_name)
+			-- 	if not package:is_installed() then
+			-- 		package:install()
+			-- 	end
+			-- end
+
+			require("mason-lspconfig").setup({
+				ensure_installed = {},
+				automatic_installation = true,
+			})
+
 			-- Setup language servers.
 			local lspconfig = require('lspconfig')
 
@@ -1028,137 +1081,114 @@ require("lazy").setup({
 		opts = {},
 	},
 	-- java
+	-- Removed in favor of ctags
+	-- {
+	-- 	'mfussenegger/nvim-jdtls',
+	-- 	init = function()
+	-- 		-- require('jdtls').setup()
+	-- 		-- require('lspconfig').jdtls.setup({})
+	-- 		-- end,
+	-- 		-- config = function()
+	-- 		local home = os.getenv 'HOME'
+	-- 		local workspace_path = home .. '/.local/share/nvim/jdtls-workspace/'
+	-- 		local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ':p:h:t')
+	-- 		local workspace_dir = workspace_path .. project_name
+	--
+	-- 		local status, jdtls = pcall(require, 'jdtls')
+	-- 		if not status then
+	-- 			return
+	-- 		end
+	-- 		local extendedClientCapabilities = jdtls.extendedClientCapabilities
+	--
+	-- 		local config = {
+	-- 			cmd = {
+	-- 				'java',
+	-- 				-- home .. '/.local/share/nvim/mason/bin/jdtls',
+	-- 				'-Declipse.application=org.eclipse.jdt.ls.core.id1',
+	-- 				'-Dosgi.bundles.defaultStartLevel=4',
+	-- 				'-Declipse.product=org.eclipse.jdt.ls.core.product',
+	-- 				'-Dlog.protocol=true',
+	-- 				'-Dlog.level=ALL',
+	-- 				'-Xms4g',
+	-- 				'-Xmx20g',
+	-- 				'--add-modules=ALL-SYSTEM',
+	-- 				'--add-opens',
+	-- 				'java.base/java.util=ALL-UNNAMED',
+	-- 				'--add-opens',
+	-- 				'java.base/java.lang=ALL-UNNAMED',
+	-- 				'-javaagent:' ..
+	-- 					home .. '/.local/share/nvim/mason/packages/lombok-nightly/lombok.jar',
+	-- 				'-jar',
+	-- 				vim.fn.glob(home ..
+	-- 					'/.local/share/nvim/mason/packages/jdtls/plugins/org.eclipse.equinox.launcher_*.jar'),
+	-- 				'-configuration',
+	-- 				home .. '/.local/share/nvim/mason/packages/jdtls/config_linux',
+	-- 				'-data',
+	-- 				workspace_dir,
+	-- 			},
+	-- 			-- root_dir = require('jdtls.setup').find_root { '.mvn', 'mvnw', 'gradlew', 'pom.xml', 'build.gradle' },
+	-- 			root_dir = function()
+	-- 				return require('jdtls.setup').find_root { '.mvn' }
+	-- 			end,
+	-- 			require('jdtls.setup').find_root { '.mvn', 'mvnw', 'gradlew', 'pom.xml', 'build.gradle' },
+	--
+	-- 			settings = {
+	-- 				java = {
+	-- 					signatureHelp = { enabled = true },
+	-- 					extendedClientCapabilities = extendedClientCapabilities,
+	-- 					maven = {
+	-- 						downloadSources = true,
+	-- 					},
+	-- 					referencesCodeLens = {
+	-- 						enabled = true,
+	-- 					},
+	-- 					references = {
+	-- 						includeDecompiledSources = true,
+	-- 					},
+	-- 					inlayHints = {
+	-- 						parameterNames = {
+	-- 							enabled = 'all', -- literals, all, none
+	-- 						},
+	-- 					},
+	-- 					format = {
+	-- 						enabled = false,
+	-- 					},
+	-- 				},
+	-- 			},
+	--
+	-- 			init_options = {
+	-- 				bundles = {},
+	-- 			},
+	-- 			autostart = true,
+	-- 		}
+	-- 		-- require('jdtls').start_or_attach(config)
+	-- 		require('lspconfig').jdtls.setup(config)
+	-- 	end,
+	-- },
+	-- ctags for Java (needs `ctags` on PATH, e.g. `sudo pacman -S ctags` on Arch)
 	{
-		'mfussenegger/nvim-jdtls',
+		"ludovicchabant/vim-gutentags",
+		event = { "BufReadPost", "BufWritePost" },
 		init = function()
-			-- require('jdtls').setup()
-			-- require('lspconfig').jdtls.setup({})
-			-- end,
-			-- config = function()
-			local home = os.getenv 'HOME'
-			local workspace_path = home .. '/.local/share/nvim/jdtls-workspace/'
-			local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ':p:h:t')
-			local workspace_dir = workspace_path .. project_name
-
-			local status, jdtls = pcall(require, 'jdtls')
-			if not status then
-				return
-			end
-			local extendedClientCapabilities = jdtls.extendedClientCapabilities
-
-			local config = {
-				cmd = {
-					'java',
-					-- home .. '/.local/share/nvim/mason/bin/jdtls',
-					'-Declipse.application=org.eclipse.jdt.ls.core.id1',
-					'-Dosgi.bundles.defaultStartLevel=4',
-					'-Declipse.product=org.eclipse.jdt.ls.core.product',
-					'-Dlog.protocol=true',
-					'-Dlog.level=ALL',
-					'-Xms4g',
-					'-Xmx20g',
-					'--add-modules=ALL-SYSTEM',
-					'--add-opens',
-					'java.base/java.util=ALL-UNNAMED',
-					'--add-opens',
-					'java.base/java.lang=ALL-UNNAMED',
-					'-javaagent:' ..
-					home .. '/.local/share/nvim/mason/packages/lombok-nightly/lombok.jar',
-					'-jar',
-					vim.fn.glob(home ..
-						'/.local/share/nvim/mason/packages/jdtls/plugins/org.eclipse.equinox.launcher_*.jar'),
-					'-configuration',
-					home .. '/.local/share/nvim/mason/packages/jdtls/config_linux',
-					'-data',
-					workspace_dir,
-				},
-				-- root_dir = require('jdtls.setup').find_root { '.mvn', 'mvnw', 'gradlew', 'pom.xml', 'build.gradle' },
-				root_dir = function()
-					return require('jdtls.setup').find_root { '.mvn' }
-				end,
-				require('jdtls.setup').find_root { '.mvn', 'mvnw', 'gradlew', 'pom.xml', 'build.gradle' },
-
-				settings = {
-					java = {
-						signatureHelp = { enabled = true },
-						extendedClientCapabilities = extendedClientCapabilities,
-						maven = {
-							downloadSources = true,
-						},
-						referencesCodeLens = {
-							enabled = true,
-						},
-						references = {
-							includeDecompiledSources = true,
-						},
-						inlayHints = {
-							parameterNames = {
-								enabled = 'all', -- literals, all, none
-							},
-						},
-						format = {
-							enabled = false,
-						},
-					},
-				},
-
-				init_options = {
-					bundles = {},
-				},
-				autostart = true,
+			-- Omit leaf pom.xml / build.gradle: each submodule would become its own root and
+			-- tags would miss the rest of the tree (FundGuard backend uses backend/.mvn).
+			vim.g.gutentags_project_root = {
+				".git",
+				".mvn",
+				"settings.gradle",
+				"settings.gradle.kts",
+				"build.gradle",
+				"build.gradle.kts",
+				".project",
 			}
-			-- cmd = {
-			--   home .. "/.asdf/installs/java/corretto-17.0.4.9.1/bin/java",
-			--   '-Declipse.application=org.eclipse.jdt.ls.core.id1',
-			--   '-Dosgi.bundles.defaultStartLevel=4',
-			--   '-Declipse.product=org.eclipse.jdt.ls.core.product',
-			--   '-Dlog.protocol=true',
-			--   '-Dlog.level=ALL',
-			--   '-Xmx4g',
-			--   '--add-modules=ALL-SYSTEM',
-			--   '--add-opens', 'java.base/java.util=ALL-UNNAMED',
-			--   '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
-			--   -- If you use lombok, download the lombok jar and place it in ~/.local/share/eclipse
-			--   '-javaagent:' .. home .. '/.local/share/eclipse/lombok.jar',
-			--
-			--   -- The jar file is located where jdtls was installed. This will need to be updated
-			--   -- to the location where you installed jdtls
-			--   '-jar', vim.fn.glob('/opt/homebrew/Cellar/jdtls/1.18.0/libexec/plugins/org.eclipse.equinox.launcher_*.jar'),
-			--
-			--   -- The configuration for jdtls is also placed where jdtls was installed. This will
-			--   -- need to be updated depending on your environment
-			--   '-configuration', '/opt/homebrew/Cellar/jdtls/1.18.0/libexec/config_mac',
-			--
-			--   -- Use the workspace_folder defined above to store data for this project
-			--   '-data', workspace_folder,
-			-- },
-			-- require('jdtls').start_or_attach(config)
-			require('lspconfig').jdtls.setup(config)
-			-- require('lspconfig').jdtls.setup({cmd = {
-			-- 		-- 'java',
-			-- 		home .. '/.local/share/nvim/mason/bin/jdtls',
-			-- 		'-Declipse.application=org.eclipse.jdt.ls.core.id1',
-			-- 		'-Dosgi.bundles.defaultStartLevel=4',
-			-- 		'-Declipse.product=org.eclipse.jdt.ls.core.product',
-			-- 		'-Dlog.protocol=true',
-			-- 		'-Dlog.level=ALL',
-			-- 		'-Xmx1g',
-			-- 		'--add-modules=ALL-SYSTEM',
-			-- 		'--add-opens',
-			-- 		'java.base/java.util=ALL-UNNAMED',
-			-- 		'--add-opens',
-			-- 		'java.base/java.lang=ALL-UNNAMED',
-			-- 		'-javaagent:' ..
-			-- 		home .. '/.local/share/nvim/mason/packages/lombok-nightly/lombok.jar',
-			-- 		'-jar',
-			-- 		vim.fn.glob(home ..
-			-- 			-- '/.local/share/nvim/mason/packages/jdtls/plugins/org.eclipse.equinox.launcher_*.jar'),
-			-- 			'/.local/share/nvim/mason/packages/jdtls/plugins/org.eclipse.equinox.launcher.gtk.linux.x86_64_1.2.800.v20231003-1442.jar'),
-			-- 		'-configuration',
-			-- 		home .. '/.local/share/nvim/mason/packages/jdtls/config_linux',
-			-- 		'-data',
-			-- 		workspace_dir,
-			-- 	},})
+			vim.g.gutentags_cache_dir = vim.fn.stdpath("cache") .. "/ctags"
+			vim.g.gutentags_ctags_extra_args = {
+				"--languages=Java",
+				"--exclude=target",
+				"--exclude=.gradle",
+				"--exclude=build",
+				"--exclude=out",
+			}
 		end,
 	},
 	{
@@ -1241,8 +1271,13 @@ require("lazy").setup({
 			},
 			{
 				"<leader>fw",
-				"<cmd>lua require('telescope').extensions.live_grep_args.live_grep_args()<CR>",
-				desc = "Grep (root dir)",
+				"<cmd>lua require('zoekt-enhanced').smart_search()<CR>",
+				desc = "Smart Grep (Zoekt or Telescope)",
+			},
+			{
+				"<leader>jt",
+				"<cmd>lua require('telescope.builtin').tags()<CR>",
+				desc = "Tags (ctags / gutentags)",
 			},
 
 		},
@@ -1534,6 +1569,20 @@ require("lazy").setup({
 		},
 	},
 	{
+		'williamboman/mason-lspconfig.nvim',
+		dependencies = {
+			'williamboman/mason.nvim',
+		},
+		opts = {
+			ensure_installed = {
+				"ts_ls", -- TypeScript language server
+				"lua_ls", -- Lua language server
+				"rust_analyzer", -- Rust analyzer
+			},
+			automatic_installation = true,
+		},
+	},
+	{
 		'mikelue/vim-maven-plugin'
 	},
 	{
@@ -1669,16 +1718,74 @@ require("lazy").setup({
 	--
 	-- 	}
 	-- },
+	{
+		"frankroeder/parrot.nvim",
+		dependencies = { "nvim-lua/plenary.nvim" },
+		config = function()
+			require("parrot").setup({
+				providers = {
+					-- Use 'groq' as the key directly
+					groq = {
+						name = "groq",
+						api_key = os.getenv("GROQ_API_KEY"),
+						endpoint = "https://api.groq.com/openai/v1/chat/completions",
+						topic_model = "llama-3.3-70b-versatile",
+						models = { "llama-3.3-70b-versatile" },
+					},
+				},
+				-- 				hooks = {
+				--   FixAndExplain = function(parrot, params)
+				--     local template = [[
+				--       You are a professional editor. Please process the text below.
+				--
+				--       ### INSTRUCTIONS:
+				--       1. Fix all grammar, spelling, and punctuation errors.
+				--       2. Immediately after the fix, add a line that says "---".
+				--       3. Below that line, write a short "Change Log" as a code comment.
+				--
+				--       ### FORMAT TO FOLLOW:
+				--       [Fixed version of the text]
+				--       ---
+				--       # EXPLANATION:
+				--       # - Fixed [specific error]
+				--       # - Improved [specific word]
+				--
+				--       ### TEXT TO PROCESS:
+				--       {{selection}}
+				--     ]]
+				--     local model_obj = parrot.get_model("groq")
+				--     parrot.Rewrite(params, model_obj, template)
+				--   end,
+				-- }
+			})
+		end,
+	},
 
 })
 
+-- Enhanced zoekt commands
 vim.api.nvim_create_user_command("ZoektSearch", function()
-	require("tele-zoekt").zoekt_search()
+	require("zoekt-enhanced").zoekt_search()
+end, {})
+
+vim.api.nvim_create_user_command("ZoektIndex", function()
+	require("zoekt-enhanced").force_index()
+end, {})
+
+vim.api.nvim_create_user_command("ZoektStatus", function()
+	require("zoekt-enhanced").status()
+end, {})
+
+vim.api.nvim_create_user_command("ZoektStartServer", function()
+	require("zoekt-enhanced").start_server()
 end, {})
 
 vim.api.nvim_create_user_command("AzureSearch", function()
 	require("tele-azure").search_devops()
 end, {})
+
+-- Initialize enhanced zoekt on startup
+require("zoekt-enhanced").init_zoekt()
 
 -- command! -bang -nargs=* Rg call fzf#vim#grep("rg --column --line-number --no-heading --color=always --smart-case ".shellescape(<q-args>), 1, {'options': '--delimiter : --nth 4..'}, <bang>0)
 --[[
