@@ -816,6 +816,134 @@ require("lazy").setup({
 			vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
 			vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist)
 
+			-- LSP when a client supports it (same as before). Otherwise tag jump like <C-]>.
+			-- Note: vim.cmd("normal! <C-]>") does not expand <C-]>; use exec + "\<C-]>" (Vimscript) or feedkeys.
+			local function gd_definition_or_tag()
+				local bufnr = vim.api.nvim_get_current_buf()
+				local def_m = vim.lsp.protocol.Methods.textDocument_definition
+				for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
+					if client.supports_method(def_m) then
+						vim.lsp.buf.definition()
+						return
+					end
+				end
+				if vim.fn.expand("<cword>") == "" then
+					return
+				end
+				vim.cmd([[exec "silent! normal! \<C-]>"]])
+			end
+			vim.keymap.set("n", "gd", gd_definition_or_tag)
+
+			local function gr_references_or_tags()
+				local bufnr = vim.api.nvim_get_current_buf()
+				local refs_m = vim.lsp.protocol.Methods.textDocument_references
+				for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
+					if client.supports_method(refs_m) then
+						vim.lsp.buf.references()
+						return
+					end
+				end
+				local w = vim.fn.expand("<cword>")
+				if w == "" then
+					return
+				end
+				-- Ctags only knows definitions, not usages. Use ripgrep for word matches (poor-man's references).
+				local root = vim.fs.root(bufnr, { ".git", ".mvn", "go.mod", "Cargo.toml", "package.json" })
+					or vim.fn.getcwd()
+				local function path_abs(p)
+					if p:sub(1, 1) == "/" then
+						return vim.fs.normalize(p)
+					end
+					return vim.fs.normalize(vim.fs.joinpath(root, p))
+				end
+				if vim.fn.executable("rg") == 1 then
+					local res = vim.system({
+						"rg",
+						"--vimgrep",
+						"--no-heading",
+						"--fixed-strings",
+						"-w",
+						w,
+						"--glob",
+						"!**/target/**",
+						"--glob",
+						"!**/.git/**",
+						"--glob",
+						"!**/node_modules/**",
+						"--glob",
+						"!**/.gradle/**",
+						"--glob",
+						"!**/build/**",
+						"--glob",
+						"!**/dist/**",
+						"--glob",
+						"!**/.cache/**",
+						".",
+					}, { cwd = root, text = true }):wait()
+					local out = vim.trim(res.stdout or "")
+					if res.code ~= 0 and res.code ~= 1 then
+						vim.notify(vim.trim(res.stderr or "") ~= "" and vim.trim(res.stderr) or "rg failed", vim.log.levels.WARN)
+						return
+					end
+					if out == "" then
+						vim.notify("No rg matches for: " .. w, vim.log.levels.INFO)
+						return
+					end
+					local qf = {}
+					for line in vim.gsplit(out, "\n", { plain = true }) do
+						if line ~= "" then
+							local path, lnum, col, text = line:match("^(.-):(%d+):(%d+):(.+)$")
+							if path and lnum then
+								qf[#qf + 1] = {
+									filename = path_abs(path),
+									lnum = tonumber(lnum),
+									col = tonumber(col) or 1,
+									text = text,
+								}
+							end
+						end
+					end
+					if #qf == 0 then
+						vim.notify("Could not parse rg --vimgrep output", vim.log.levels.WARN)
+						return
+					end
+					vim.fn.setqflist({}, " ", { title = "rg (word): " .. w, items = qf })
+					vim.cmd("botright copen")
+					return
+				end
+				local tags = vim.fn.taglist("^" .. vim.pesc(w) .. "$")
+				if #tags == 0 then
+					vim.notify("No LSP, no rg, and no ctags for: " .. w, vim.log.levels.INFO)
+					return
+				end
+				local qf = {}
+				for _, t in ipairs(tags) do
+					local item = { filename = t.filename, text = t.name }
+					if t.kind then
+						item.text = t.kind .. "\t" .. t.name
+					end
+					local cmd = t.cmd or ""
+					if cmd:sub(1, 1) == "/" then
+						local pat = cmd:match("^/(.+)/")
+						if pat then
+							item.pattern = pat
+						end
+					else
+						local ln = cmd:match("^(%d+)")
+						if ln then
+							item.lnum = tonumber(ln)
+						end
+					end
+					if t.line then
+						item.lnum = tonumber(t.line)
+					end
+					qf[#qf + 1] = item
+				end
+				vim.fn.setqflist({}, " ", { title = "ctags (defs only): " .. w, items = qf })
+				vim.cmd("botright copen")
+			end
+			vim.keymap.set("n", "gr", gr_references_or_tags)
+
 			-- Use LspAttach autocommand to only map the following keys
 			-- after the language server attaches to the current buffer
 			vim.api.nvim_create_autocmd('LspAttach', {
@@ -835,7 +963,6 @@ require("lazy").setup({
 					-- See `:help vim.lsp.*` for documentation on any of the below functions
 					local opts = { buffer = ev.buf }
 					vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
-					vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
 					vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
 					vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
 					vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, opts)
@@ -847,7 +974,6 @@ require("lazy").setup({
 					--vim.keymap.set('n', '<space>D', vim.lsp.buf.type_definition, opts)
 					vim.keymap.set('n', '<leader>r', vim.lsp.buf.rename, opts)
 					vim.keymap.set({ 'n', 'v' }, '<leader>a', vim.lsp.buf.code_action, opts)
-					vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
 					vim.keymap.set('n', '<leader>f', function()
 						-- vim.lsp.buf.format { async = true }
 						require("conform").format({ async = true, lsp_format = "fallback" })
