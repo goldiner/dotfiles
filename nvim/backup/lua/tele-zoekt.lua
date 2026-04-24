@@ -126,7 +126,7 @@ local function run_zoekt_search(prompt)
 	local encoded = url_encode(prompt)
 	--num - is the number of files (the number of matches can be higher)
 	local url = string.format(
-		"http://localhost:6070/search?q=%s&num=50&ctx=0&format=json",
+		"http://localhost:6100/search?q=%s&num=50&ctx=0&format=json",
 		encoded)
 	local res = curl.get(url, { timeout = 2000 })
 	-- local parsed = vim.fn.json_decode(res.body)

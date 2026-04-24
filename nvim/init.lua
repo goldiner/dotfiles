@@ -89,6 +89,60 @@ vim.opt.diffopt:append('iwhite')
 --- https://luppeng.wordpress.com/2020/10/10/when-to-use-each-of-the-git-diff-algorithms/
 vim.opt.diffopt:append('algorithm:histogram')
 vim.opt.diffopt:append('indent-heuristic')
+
+-------------------------------------------------------------------------------
+-- Neovim 0.12+: :lsp subcommands replace legacy :Lsp* commands; UI2; LspProgress
+-------------------------------------------------------------------------------
+if vim.fn.has("nvim-0.12") == 1 then
+	vim.api.nvim_create_user_command("LspInfo", "checkhealth vim.lsp", {
+		desc = "Show LSP status (:checkhealth vim.lsp)",
+	})
+
+	vim.api.nvim_create_user_command("LspLog", function()
+		local log_path = vim.fs.joinpath(vim.fn.stdpath("state"), "lsp.log")
+		vim.cmd("edit " .. vim.fn.fnameescape(log_path))
+	end, {
+		desc = "Open stdpath(state)/lsp.log",
+	})
+
+	vim.api.nvim_create_user_command("LspRestart", "lsp restart", {
+		desc = "Restart LSP clients (:lsp restart)",
+	})
+
+	vim.api.nvim_create_autocmd("LspProgress", {
+		callback = function(ev)
+			local params = ev.data and ev.data.params
+			local value = params and params.value
+			if not value then
+				return
+			end
+			local client_id = (ev.data and ev.data.client_id) or 0
+			vim.api.nvim_echo({ { value.message or "done" } }, false, {
+				id = "lsp." .. tostring(client_id),
+				kind = "progress",
+				source = "vim.lsp",
+				title = value.title,
+				status = value.kind ~= "end" and "running" or "success",
+				percent = value.percentage,
+			})
+		end,
+	})
+
+	local ok_ui2, ui2 = pcall(require, "vim._core.ui2")
+	if ok_ui2 and ui2 and ui2.enable then
+		ui2.enable({
+			enable = true,
+			msg = {
+				targets = "cmd",
+				cmd = { height = 0.5 },
+				dialog = { height = 0.5 },
+				msg = { height = 0.5, timeout = 4000 },
+				pager = { height = 0.5 },
+			},
+		})
+	end
+end
+
 -- show a column at 80 characters as a guide for long lines
 -- vim.opt.colorcolumn = '80'
 --- except in Rust where the rule is 100 characters
@@ -399,6 +453,9 @@ vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "CursorHoldI", "FocusGai
 vim.api.nvim_create_autocmd("BufWritePost", {
 	pattern = "*.java",
 	callback = function()
+		if vim.bo.readonly then
+			return
+		end
 		local filepath = vim.api.nvim_buf_get_name(0)
 		-- vim.system() works on next line too.
 		-- os.execute("$HOME/ws/tools/fg-format-backend.sh '" .. filepath .. "' &")
@@ -502,6 +559,97 @@ require("lazy").setup({
 			-- https://github.com/nvim-lua/lsp_extensions.nvim/issues/21
 			-- call Base16hi("CocHintSign", g:base16_gui03, "", g:base16_cterm03, "", "", "")
 		end
+	},
+
+	-- nvim-treesitter `main` is a full rewrite (Nvim 0.12+): there is no `nvim-treesitter.configs` anymore.
+	-- See plugin README — use `.setup()`, `.install()`, `vim.treesitter.start()` for highlight, optional indentexpr.
+	-- Needs tree-sitter CLI 0.26.1+ on PATH (not npm): https://github.com/tree-sitter/tree-sitter/blob/master/crates/cli/README.md
+	{
+		"nvim-treesitter/nvim-treesitter",
+		lazy = false,
+		branch = "main",
+		build = ":TSUpdate",
+		priority = 999,
+		config = function()
+			-- GUI / dock launches often get a minimal PATH (no ~/.cargo/bin). nvim-treesitter shells out to `tree-sitter`.
+			do
+				local sep = vim.fn.has("win32") == 1 and ";" or ":"
+				local p = vim.env.PATH or ""
+				for _, dir in ipairs({
+					vim.fs.joinpath(vim.fn.expand("~"), ".cargo", "bin"),
+					vim.fs.joinpath(vim.fn.expand("~"), ".local", "bin"),
+				}) do
+					if vim.fn.isdirectory(dir) == 1 and not p:find(vim.pesc(dir), 1, true) then
+						p = dir .. sep .. p
+					end
+				end
+				vim.env.PATH = p
+			end
+
+			require("nvim-treesitter").setup({
+				install_dir = vim.fs.joinpath(vim.fn.stdpath("data") --[[@as string]], "site"),
+			})
+
+			local parsers = {
+				"python",
+				"javascript",
+				"typescript",
+				"tsx",
+				"go",
+				"rust",
+				"html",
+				"css",
+				"lua",
+				"vim",
+				"vimdoc",
+				"query",
+				"yaml",
+			}
+
+			if vim.fn.executable("tree-sitter") ~= 1 then
+				if not vim.g.ts_cli_warn then
+					vim.g.ts_cli_warn = true
+					vim.notify(
+						"[nvim-treesitter] `tree-sitter` CLI not found (need 0.26.1+ on PATH). Arch: sudo pacman -S tree-sitter-cli — or: cargo install tree-sitter-cli --locked (ensure ~/.cargo/bin is on PATH). Then restart Nvim or :TSInstall.",
+						vim.log.levels.WARN
+					)
+				end
+			else
+				local ok, err = pcall(function()
+					require("nvim-treesitter").install(parsers):wait(300000)
+				end)
+				if not ok then
+					vim.notify(
+						"[nvim-treesitter] parser install failed: " .. tostring(err),
+						vim.log.levels.WARN
+					)
+				end
+			end
+
+			local indent_ts = {
+				lua = true,
+				python = true,
+				javascript = true,
+				javascriptreact = true,
+				typescript = true,
+				typescriptreact = true,
+				html = true,
+				css = true,
+				yaml = true,
+				rust = true,
+				go = true,
+			}
+
+			vim.api.nvim_create_autocmd("FileType", {
+				pattern = "*",
+				callback = function(args)
+					pcall(vim.treesitter.start, args.buf)
+					if indent_ts[args.match] then
+						vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+					end
+				end,
+			})
+		end,
 	},
 
 	-- nice bar at the bottom
@@ -695,19 +843,48 @@ require("lazy").setup({
 			-- 	end
 			-- end
 
+			-- Extend bundled configs from nvim-lspconfig (`lsp/*.lua` on runtimepath).
+			-- See :help lsp-quickstart and :help lspconfig-nvim-0.11
+
+			-- Rust
+			vim.lsp.config("rust_analyzer", {
+				settings = {
+					["rust-analyzer"] = {
+						cargo = {
+							allFeatures = true,
+						},
+						imports = {
+							group = {
+								enable = false,
+							},
+						},
+						completion = {
+							postfix = {
+								enable = false,
+							},
+						},
+					},
+				},
+			})
+
+			-- typescript-language-server resolves TypeScript under the LSP workspace root (node_modules/typescript).
+			-- Default nvim-lspconfig markers include `.git`; in a monorepo that can pick a parent directory that
+			-- has no node_modules while e.g. fgrepo/package.json + node_modules/typescript exists deeper.
+			vim.lsp.config("ts_ls", {
+				root_markers = {
+					"tsconfig.json",
+					"jsconfig.json",
+					"package.json",
+				},
+			})
+			vim.lsp.config("lua_ls", {})
+
 			require("mason-lspconfig").setup({
 				ensure_installed = {},
 				automatic_installation = true,
 			})
 
-			-- Setup language servers.
-			local lspconfig = require('lspconfig')
-
-
-			local lspconfig = require 'lspconfig'
-
-
-			local configs = require 'lspconfig.configs'
+			vim.lsp.enable({ "rust_analyzer", "ts_ls", "lua_ls" })
 
 			-- if not configs.lsp_ai then
 			-- 	configs.lsp_ai = {
@@ -764,33 +941,6 @@ require("lazy").setup({
 
 
 
-			-- Rust
-			lspconfig.rust_analyzer.setup {
-				-- Server-specific settings. See `:help lspconfig-setup`
-				settings = {
-					["rust-analyzer"] = {
-						cargo = {
-							allFeatures = true,
-						},
-						imports = {
-							group = {
-								enable = false,
-							},
-						},
-						completion = {
-							postfix = {
-								enable = false,
-							},
-						},
-					},
-				},
-			}
-
-
-			-- TypeScript
-			lspconfig.ts_ls.setup({})
-
-
 			-- -- TypeScript Go - working part
 			-- vim.lsp.config("ts_go_ls", {
 			-- 	cmd = { vim.loop.os_homedir() .. "/ws/public/typescript-go/built/local/tsgo", "--lsp", "--stdio" }, --, "lsp", "-stdio" },
@@ -806,9 +956,6 @@ require("lazy").setup({
 			-- })
 			-- vim.lsp.enable("ts_go_ls")
 
-
-			lspconfig.lua_ls.setup {
-			}
 			-- Global mappings.
 			-- See `:help vim.diagnostic.*` for documentation on any of the below functions
 			-- vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float)
@@ -1168,17 +1315,7 @@ require("lazy").setup({
 	{
 		"cuducos/yaml.nvim",
 		ft = { "yaml" },
-		dependencies = {
-			"nvim-treesitter/nvim-treesitter",
-		},
 	},
-	-- {
-	--
-	-- 	"nvim-treesitter/nvim-treesitter",
-	-- 	opts = {
-	-- 		ensure_installed = { "java" },
-	-- 	}
-	-- },
 	-- rust
 	{
 		'rust-lang/rust.vim',
@@ -1577,6 +1714,21 @@ require("lazy").setup({
 			vim.g.vim_markdown_auto_insert_bullets = 0
 		end
 	},
+	{
+		"epwalsh/obsidian.nvim",
+	 	lazy = false,
+		version = "*",
+		ft = "markdown",
+		dependencies = { "nvim-lua/plenary.nvim" },
+		opts = {
+			workspaces = {
+				{
+					name = "private",
+					path = "/home/uri/ws/private/obsidian",
+				},
+			},
+		},
+	},
 	-- {
 	-- 	"github/copilot.vim",
 	-- 	lazy = false,
@@ -1667,6 +1819,29 @@ require("lazy").setup({
 		"numToStr/Comment.nvim",
 		config = function(_, opts)
 			require("Comment").setup(opts)
+
+			-- Neovim 0.12+ Tree-sitter: Comment.ft.calculate() can throw (e.g. Java) when walking
+			-- LanguageTree; errors are often plain strings, so the plugin shows "[Comment.nvim] nil".
+			do
+				local ft = require("Comment.ft")
+				local orig_calc = ft.calculate
+				function ft.calculate(ctx)
+					local ok, res = pcall(orig_calc, ctx)
+					if ok then
+						return res
+					end
+					return ft.get(vim.bo.filetype, ctx.ctype)
+				end
+			end
+			do
+				local U = require("Comment.utils")
+				function U.catch(fn, ...)
+					xpcall(fn, function(err)
+						local msg = type(err) == "table" and err.msg or tostring(err)
+						vim.notify(string.format("[Comment.nvim] %s", msg), vim.log.levels.WARN)
+					end, ...)
+				end
+			end
 		end,
 	},
 	{

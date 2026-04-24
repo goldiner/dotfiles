@@ -3,21 +3,46 @@ local M = {}
 -- Global variable to store the zoekt server port for this nvim session
 local zoekt_server_port = nil
 
--- Helper function to find a free port
+-- True if something is listening on TCP port (parses `ss -tln`; avoids netstat which is often missing on Arch/LXC)
+local function is_port_in_use(port)
+	local p = tostring(port)
+	local h = io.popen("ss -tln 2>/dev/null")
+	if not h then
+		return false
+	end
+	for line in h:lines() do
+		-- Typical: "LISTEN 0 128 0.0.0.0:6070 0.0.0.0:*" or "*:6070 ..." or "[::]:6070"
+		if line:match(":" .. p .. "%s") or line:match(":" .. p .. "$") then
+			h:close()
+			return true
+		end
+	end
+	h:close()
+	return false
+end
+
+-- Helper function to find a free port (one `ss` read, not per-port)
 local function find_free_port()
-	-- Try ports starting from 6070, but find one that's actually free
-	for port = 6070, 6200 do
-		local handle = io.popen(string.format("netstat -ln 2>/dev/null | grep ':%d '", port))
-		local result = handle:read("*a")
-		handle:close()
-		
-		if result == "" then  -- Port is free
+	local used = {}
+	local h = io.popen("ss -tln 2>/dev/null")
+	if h then
+		for line in h:lines() do
+			local port_str = line:match(":(%d+)%s") or line:match(":(%d+)$")
+			if port_str then
+				local n = tonumber(port_str)
+				if n then
+					used[n] = true
+				end
+			end
+		end
+		h:close()
+	end
+	for port = 6100, 6200 do
+		if not used[port] then
 			return port
 		end
 	end
-	
-	-- Fallback to default if we can't find anything
-	return 6070
+	return 6100
 end
 
 -- Helper function to get the zoekt server port (find once, reuse for session)
@@ -255,24 +280,39 @@ end
 -- Global variable to track if server is running for this session
 local server_started = false
 
--- Function to test if server is actually responding
+-- Function to test if server is actually responding (must be Zoekt, not another HTTP service on the same port)
 local function test_server_connection(port)
-	-- First check if anything is listening on the port using ss or lsof
-	local port_check = io.popen(string.format("ss -ln 2>/dev/null | grep ':%d ' || lsof -i :%d 2>/dev/null | grep LISTEN", port, port))
-	local port_result = port_check:read("*a")
-	port_check:close()
-	
-	if port_result == "" then
+	if not is_port_in_use(port) then
 		return false
 	end
-	
-	-- Port is listening, now test HTTP response
-	local test_url = string.format("http://localhost:%d/search?q=test&num=1&format=json", port)
-	local handle = io.popen(string.format("curl -s --connect-timeout 1 --max-time 2 %s >/dev/null 2>&1; echo $?", test_url))
-	local exit_code = handle:read("*a"):gsub("%s+", "")
-	handle:close()
-	local is_responding = exit_code == "0"
-	return is_responding
+
+	local test_url = string.format("http://127.0.0.1:%d/search?q=test&num=1&format=json", port)
+	local handle = io.popen(
+		string.format("curl -sS --connect-timeout 1 --max-time 3 %s 2>/dev/null", vim.fn.shellescape(test_url))
+	)
+	local body = handle and handle:read("*a") or ""
+	if handle then
+		handle:close()
+	end
+
+	if body == "" then
+		return false
+	end
+
+	-- curl exits 0 on HTTP 404; Spring/other apps on 6070 return JSON without Zoekt's shape
+	local ok, parsed = pcall(vim.json.decode, body)
+	if not ok or type(parsed) ~= "table" then
+		return false
+	end
+	if type(parsed.result) ~= "table" then
+		return false
+	end
+	-- Zoekt uses FileMatches (may be empty array)
+	if parsed.result.FileMatches == nil then
+		return false
+	end
+
+	return true
 end
 
 -- Function to wait for server to be ready with polling
